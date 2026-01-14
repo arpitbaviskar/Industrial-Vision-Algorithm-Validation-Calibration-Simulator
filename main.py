@@ -1,25 +1,26 @@
 import cv2
 import numpy as np
 import glob
-
+import os
 
 print("OpenCV version:", cv2.__version__)
-
-
 # ---------------- CONFIG ----------------
-CHECKERBOARD = (6, 8)  # inner corners
+CHECKERBOARD = (8, 6)        # ✅ CORRECT inner corners
 MIN_VALID_IMAGES = 5
 # ----------------------------------------
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CALIB_DIR = os.path.join(BASE_DIR, "calibration")
+os.makedirs(CALIB_DIR, exist_ok=True)
 
-
+# Prepare object points
 objp = np.zeros((CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
 objp[:, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
 
 objpoints = []
 imgpoints = []
 
-images = glob.glob("calibration/*.jpg")
+images = glob.glob(os.path.join(CALIB_DIR, "cb*.jpg"))
 
 img_shape = None
 
@@ -40,7 +41,7 @@ for fname in images:
         flags=cv2.CALIB_CB_NORMALIZE_IMAGE
     )
 
-    print(f"{fname} → {'FOUND' if ret else 'NOT FOUND'}")
+    print(f"{os.path.basename(fname)} → {'FOUND' if ret else 'NOT FOUND'}")
 
     if ret:
         objpoints.append(objp)
@@ -53,7 +54,7 @@ if len(objpoints) < MIN_VALID_IMAGES:
     )
 
 # ----------- CALIBRATION -----------------
-ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(
+rms, K, dist, rvecs, tvecs = cv2.calibrateCamera(
     objpoints,
     imgpoints,
     img_shape,
@@ -63,4 +64,10 @@ ret, K, dist, rvecs, tvecs = cv2.calibrateCamera(
 
 print("\nCamera Matrix (K):\n", K)
 print("\nDistortion Coefficients:\n", dist)
-print("\nRe-projection Error:\n", ret)
+print("\nRMS Reprojection Error:", rms)
+
+# ----------- SAVE OUTPUTS ----------------
+np.save(os.path.join(CALIB_DIR, "camera_matrix.npy"), K)
+np.save(os.path.join(CALIB_DIR, "dist_coeffs.npy"), dist)
+
+print("\nSaved calibration files to:", CALIB_DIR)
