@@ -2,12 +2,12 @@ import cv2
 import numpy as np
 import glob
 import os
-
+from run_d2 import SQUARE_SIZE_MM
 # ============================
 # Load Day 1 & Day 2 outputs
-camera_matrix = np.load("camera_matrix.npy")
-dist_coeffs = np.load("dist_coeffs.npy")
-H = np.load("homography.npy")
+camera_matrix = np.load(r"E:\Industrial Vision Algorithm Validation & Calibration Simulator\calibration\camera_matrix.npy")
+dist_coeffs = np.load(r"E:\Industrial Vision Algorithm Validation & Calibration Simulator\calibration\dist_coeffs.npy")
+H = np.load(r"E:\Industrial Vision Algorithm Validation & Calibration Simulator\calibration\homography.npy")
 
 # ============================
 def pixel_to_world(pt, H):
@@ -34,7 +34,7 @@ def repeatability_stats(values):
 # ============================
 # Configuration
 CHECKERBOARD = (8, 6)
-known_length_mm = 50.0
+known_length_mm = SQUARE_SIZE_MM
 
 img_dir = r"E:\Industrial Vision Algorithm Validation & Calibration Simulator\calibration"
 img_paths = sorted(glob.glob(os.path.join(img_dir, "cb*.jpg")))
@@ -70,7 +70,7 @@ for path in img_paths:
 
     # Pick two consistent real corners
     p1_pixel = corners[0][0]
-    p2_pixel = corners[7][0]   # same row, known spacing
+    p2_pixel = corners[1][0]   # same row, known spacing
 
     # Pixel → world (Day 2)
     p1_world = pixel_to_world(p1_pixel, H)
