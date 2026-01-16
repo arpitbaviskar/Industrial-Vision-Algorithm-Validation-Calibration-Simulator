@@ -1,14 +1,13 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 import csv
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def save_results_csv(measurements, known_length_mm, out_dir):
     os.makedirs(out_dir, exist_ok=True)
 
     csv_path = os.path.join(out_dir, "measurement_results.csv")
-
     with open(csv_path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["sample_id", "measured_mm", "error_mm"])

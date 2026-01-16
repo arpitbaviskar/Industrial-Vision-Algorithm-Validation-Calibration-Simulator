@@ -81,12 +81,14 @@ def run_measurement(image_dir, checkerboard=(8, 6), square_size_mm=10.0):
     pct_err = (abs_err / known_length_mm) * 100
 
     return {
-        "mean_mm": mean_mm,
-        "std_dev_mm": std_mm,
-        "abs_error_mm": abs_err,
-        "percent_error": pct_err,
-        "min_mm": np.min(measurements),
-        "max_mm": np.max(measurements),
-        "range_mm": np.ptp(measurements),
-        "num_samples": len(measurements),
-    }
+    "mean_mm": mean_mm,
+    "std_dev_mm": std_mm,
+    "abs_error_mm": abs_err,
+    "percent_error": pct_err,
+    "min_mm": np.min(measurements),
+    "max_mm": np.max(measurements),
+    "range_mm": np.ptp(measurements),
+    "num_samples": len(measurements),
+    "measurements": measurements,
+    "known_length_mm": known_length_mm
+}
