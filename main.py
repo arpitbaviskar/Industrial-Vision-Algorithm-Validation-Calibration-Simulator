@@ -1,17 +1,15 @@
-"""
-Industrial Vision Algorithm Validation & Calibration Simulator
-Main Orchestrator
-
-Day 1: Camera Calibration
-Day 2: Geometry & Homography
-Day 3: Measurement & Repeatability
-"""
 import os
 import numpy as np
 from vision.calibration import run_calibration
 from vision.camera_model import load_camera_model
 from vision.geometry import compute_homography
 from vision.measurement import run_measurement
+from utils.validation_plots import (
+    save_results_csv,
+    plot_error_histogram,
+    plot_repeatability
+)
+
 
 
 # ---------------- CONFIG ----------------
@@ -26,8 +24,8 @@ def main():
     print(" INDUSTRIAL VISION VALIDATION ")
     print("==============================\n")
 
-    # -------- DAY 1 --------
-    print("▶ Day 1: Camera Calibration")
+    # -------- Step 1 --------
+    print("▶  Camera Calibration")
 
     calib_K = os.path.join(IMAGE_DIR, "camera_matrix.npy")
     calib_D = os.path.join(IMAGE_DIR, "dist_coeffs.npy")
@@ -43,8 +41,8 @@ def main():
             checkerboard=CHECKERBOARD
         )
 
-    # -------- DAY 2 --------
-    print("\n▶ Day 2: Geometry Calibration (Homography)")
+    # -------- Step 2 --------
+    print("\n Geometry Calibration (Homography)")
 
     H_path = os.path.join(IMAGE_DIR, "homography.npy")
 
@@ -59,14 +57,24 @@ def main():
             square_size_mm=SQUARE_SIZE_MM
         )
 
-    # -------- DAY 3 --------
-    print("\n▶ Day 3: Measurement & Repeatability Analysis")
+    # -------- Step 3 --------
+    print("\n Measurement & Repeatability Analysis")
     results = run_measurement(
         image_dir=IMAGE_DIR,
         checkerboard=CHECKERBOARD,
         square_size_mm=SQUARE_SIZE_MM
     )
+    # -------- Step 4 --------
+    print("\n Validation & Reporting")
 
+    OUT_DIR = "validation_outputs"
+
+    measurements = results["measurements"]
+    known_len = results["known_length_mm"]
+
+    save_results_csv(measurements, known_len, OUT_DIR)
+    plot_error_histogram(measurements, known_len, OUT_DIR)
+    plot_repeatability(measurements, known_len, OUT_DIR)
     # -------- FINAL SUMMARY --------
     print("\n==============================")
     print(" FINAL VALIDATION SUMMARY")
