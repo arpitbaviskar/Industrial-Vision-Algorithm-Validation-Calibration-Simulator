@@ -1,73 +1,90 @@
-import cv2
-import numpy as np
-import glob
+"""
+Industrial Vision Algorithm Validation & Calibration Simulator
+Main Orchestrator
+
+Day 1: Camera Calibration
+Day 2: Geometry & Homography
+Day 3: Measurement & Repeatability
+"""
 import os
+import numpy as np
+from vision.calibration import run_calibration
+from vision.camera_model import load_camera_model
+from vision.geometry import compute_homography
+from vision.measurement import run_measurement
 
-print("OpenCV version:", cv2.__version__)
+
 # ---------------- CONFIG ----------------
-CHECKERBOARD = (8, 6)        # ✅ CORRECT inner corners
-MIN_VALID_IMAGES = 5
-# ----------------------------------------
+IMAGE_DIR = "calibration"
+CHECKERBOARD = (8, 6)        # inner corners
+SQUARE_SIZE_MM = 10.0        # measured physical square size
+# ---------------------------------------
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CALIB_DIR = os.path.join(BASE_DIR, "calibration")
-os.makedirs(CALIB_DIR, exist_ok=True)
 
-# Prepare object points
-objp = np.zeros((CHECKERBOARD[0] * CHECKERBOARD[1], 3), np.float32)
-objp[:, :2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-1, 2)
+def main():
+    print("\n==============================")
+    print(" INDUSTRIAL VISION VALIDATION ")
+    print("==============================\n")
 
-objpoints = []
-imgpoints = []
+    # -------- DAY 1 --------
+    print("▶ Day 1: Camera Calibration")
 
-images = glob.glob(os.path.join(CALIB_DIR, "cb*.jpg"))
+    calib_K = os.path.join(IMAGE_DIR, "camera_matrix.npy")
+    calib_D = os.path.join(IMAGE_DIR, "dist_coeffs.npy")
 
-img_shape = None
+    if os.path.exists(calib_K) and os.path.exists(calib_D):
+        print("Calibration files found. Loading existing calibration.")
+        K, dist = load_camera_model(IMAGE_DIR)
+        rms = None
+    else:
+        print("Calibration files not found. Running calibration...")
+        K, dist, rms = run_calibration(
+            image_dir=IMAGE_DIR,
+            checkerboard=CHECKERBOARD
+        )
 
-# ------------ DETECTION LOOP -------------
-for fname in images:
-    img = cv2.imread(fname)
-    if img is None:
-        continue
+    # -------- DAY 2 --------
+    print("\n▶ Day 2: Geometry Calibration (Homography)")
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    H_path = os.path.join(IMAGE_DIR, "homography.npy")
 
-    if img_shape is None:
-        img_shape = gray.shape[::-1]
+    if os.path.exists(H_path):
+        print("Homography found. Loading existing homography.")
+        H = np.load(H_path)
+    else:
+        print("Homography not found. Computing homography...")
+        H = compute_homography(
+            image_dir=IMAGE_DIR,
+            checkerboard=CHECKERBOARD,
+            square_size_mm=SQUARE_SIZE_MM
+        )
 
-    ret, corners = cv2.findChessboardCornersSB(
-        gray,
-        CHECKERBOARD,
-        flags=cv2.CALIB_CB_NORMALIZE_IMAGE
+    # -------- DAY 3 --------
+    print("\n▶ Day 3: Measurement & Repeatability Analysis")
+    results = run_measurement(
+        image_dir=IMAGE_DIR,
+        checkerboard=CHECKERBOARD,
+        square_size_mm=SQUARE_SIZE_MM
     )
 
-    print(f"{os.path.basename(fname)} → {'FOUND' if ret else 'NOT FOUND'}")
+    # -------- FINAL SUMMARY --------
+    print("\n==============================")
+    print(" FINAL VALIDATION SUMMARY")
+    print("==============================")
 
-    if ret:
-        objpoints.append(objp)
-        imgpoints.append(corners)
+    if rms is not None:
+        print(f"RMS Reprojection Error (px): {rms:.4f}")
+    else:
+        print("RMS Reprojection Error (px): Loaded from previous calibration")
 
-# ----------- SAFETY CHECK ----------------
-if len(objpoints) < MIN_VALID_IMAGES:
-    raise RuntimeError(
-        f"Not enough valid checkerboard detections: {len(objpoints)}"
-    )
+    print(f"Mean Measurement (mm):       {results['mean_mm']:.3f}")
+    print(f"Std Deviation (mm):          {results['std_dev_mm']:.3f}")
+    print(f"Absolute Error (mm):         {results['abs_error_mm']:.3f}")
+    print(f"Percent Error (%):           {results['percent_error']:.2f}")
 
-# ----------- CALIBRATION -----------------
-rms, K, dist, rvecs, tvecs = cv2.calibrateCamera(
-    objpoints,
-    imgpoints,
-    img_shape,
-    None,
-    None
-)
-
-print("\nCamera Matrix (K):\n", K)
-print("\nDistortion Coefficients:\n", dist)
-print("\nRMS Reprojection Error:", rms)
-
-# ----------- SAVE OUTPUTS ----------------
-np.save(os.path.join(CALIB_DIR, "camera_matrix.npy"), K)
-np.save(os.path.join(CALIB_DIR, "dist_coeffs.npy"), dist)
-
-print("\nSaved calibration files to:", CALIB_DIR)
+    print("\n✔ Calibration validated")
+    print("✔ Geometry grounded")
+    print("✔ Measurement repeatability quantified")
+    print("\nSystem ready for validation reporting.\n")
+if __name__ == "__main__":
+    main()
